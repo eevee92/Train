@@ -91,15 +91,20 @@ void calTran(vector<vector<int> > boundary)
     }
 }
 
-void calBoundary(vector<vector<int> > boundary,vector<vector<vector<float> > > sample)
+float calBoundary(vector<vector<int> > boundary,vector<vector<vector<float> > > sample,vector<float> errorRate)
 {
+    float errorSum=0;
     vector<vector<float> >  templet=makeTemplet(mean);
     for(int i=0;i<sample.size();i++)
     {
         vector<vector<float> > word= makeWord(sample[i]);
         vector<vector<float> > trellis=makeTrellis(templet, sample[i].size());
         float score=DP(templet,word,trellis,vari,boundary[i],tran);
+        
+        errorSum+=fabs(score-errorRate[i]);
+        errorRate[i]=score;
     }
+    return errorSum;
 }
 
 void calSegStateNum(vector<vector<int> > boundary)
@@ -122,7 +127,9 @@ void train1(vector<vector<vector<float> > > &sample)
     //1d is num of sample of one digit, 2d is boundary for one digit
     //boundary[0][0] = start point of first segment of first sample
     //boundary[][i]==boundary[][i+1] means there is no segment i
+    vector<float> errorRate(sample.size());
     vector<vector<int> > boundary(sample.size());
+    
     for (int i=0; i<sample.size(); i++) {
         int b1=(int)sample[i].size()/SEGMENT;
         vector<int> b2(SEGMENT+1);
@@ -131,6 +138,7 @@ void train1(vector<vector<vector<float> > > &sample)
         }
         b2[SEGMENT]=(int)sample[i].size()-1;
         boundary[i]=b2;
+        errorRate[i]=0;
     }
     
     //initial mean,vari,tran
@@ -145,12 +153,14 @@ void train1(vector<vector<vector<float> > > &sample)
 
     }
     
-    while (1) {
+    float errorSum=1000;
+    
+    while (errorSum>20) {
         calSegStateNum(boundary);
         calMean(sample,boundary);
         calVari(sample,boundary);
         calTran(boundary);
         //update boundary
-        calBoundary(boundary,sample);
+        errorSum=calBoundary(boundary,sample,errorRate);
     }
 }
